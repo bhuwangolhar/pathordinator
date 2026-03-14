@@ -77,6 +77,10 @@ web_modules/
 # Next.js build output
 .next
 out
+/frontend/public
+/frontend/src/assets
+/frontend/tsconfig.node.json
+/frontend/vite.config.ts
 
 # Nuxt.js build / generate output
 .nuxt
