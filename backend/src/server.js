@@ -6,6 +6,7 @@ const cors = require("cors");
 const db = require("../models");
 
 const userRoutes = require("./routes/user.routes");
+const orderRoutes = require("./routes/order.routes"); // ← add
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/users", userRoutes);
+app.use("/orders", orderRoutes); // ← add
 
 const PORT = Number(process.env.PORT) || 8080;
 

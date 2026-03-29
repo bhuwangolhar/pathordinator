@@ -3,7 +3,11 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {}
+  class User extends Model {
+    static associate(models) {
+      User.hasMany(models.Order, { foreignKey: 'customer_id', as: 'orders' });
+    }
+  }
 
   User.init(
     {
@@ -11,13 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false
       },
-
       email: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
       },
-
       role: {
         type: DataTypes.ENUM('customer', 'delivery_partner', 'admin'),
         allowNull: false
@@ -27,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'User',
       tableName: 'users',
-
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at'
