@@ -6,7 +6,9 @@ const cors = require("cors");
 const db = require("../models");
 
 const userRoutes = require("./routes/user.routes");
-const orderRoutes = require("./routes/order.routes"); // ← add
+const orderRoutes = require("./routes/order.routes");
+const deliverySessionRoutes = require("./routes/deliverySessions.routes");
+const locationUpdateRoutes  = require("./routes/locationUpdates.routes");
 
 const app = express();
 
@@ -21,7 +23,9 @@ app.get("/", (req, res) => {
 });
 
 app.use("/users", userRoutes);
-app.use("/orders", orderRoutes); // ← add
+app.use("/orders", orderRoutes);
+app.use("/delivery-sessions", deliverySessionRoutes);
+app.use("/location-updates",  locationUpdateRoutes);
 
 const PORT = Number(process.env.PORT) || 8080;
 

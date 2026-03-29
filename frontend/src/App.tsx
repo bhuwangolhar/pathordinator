@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import UsersPage from "./pages/UsersPage";
 import OrdersPage from "./pages/OrdersPage";
+import DeliverySessionsPage from "./pages/DeliverySessionsPage";
+import TrackingPage from "./pages/TrackingPage";
 
 export default function App() {
   return (
@@ -161,6 +163,24 @@ export default function App() {
               </svg>
               Orders
             </NavLink>
+
+            <NavLink to="/sessions" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                <path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+              </svg>
+              Sessions
+            </NavLink>
+
+            <NavLink to="/tracking" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+              Tracking
+            </NavLink>
+
           </aside>
 
           <main className="main">
@@ -168,6 +188,8 @@ export default function App() {
               <Route path="/" element={<Navigate to="/users" replace />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/sessions" element={<DeliverySessionsPage />} />
+              <Route path="/tracking" element={<TrackingPage />} />
             </Routes>
           </main>
         </div>
