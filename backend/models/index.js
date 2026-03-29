@@ -6,7 +6,22 @@ const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
-const config = require(__dirname + '/../config/config.json')[env];
+const configPath = path.join(__dirname, '..', 'config', 'config.json');
+const fileConfig = fs.existsSync(configPath) ? require(configPath)[env] : null;
+const defaultConfig = {
+  username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'pathordinator',
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 5432),
+  dialect: process.env.DB_DIALECT || 'postgres',
+  logging: false
+};
+const config = fileConfig || (
+  process.env.DATABASE_URL
+    ? { ...defaultConfig, use_env_variable: 'DATABASE_URL' }
+    : defaultConfig
+);
 const db = {};
 
 let sequelize;

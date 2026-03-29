@@ -21,21 +21,19 @@ app.get("/", (req, res) => {
 
 app.use("/users", userRoutes);
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT) || 8080;
 
 async function startServer() {
   try {
-
     await db.sequelize.authenticate();
     console.log("Database connected.");
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
   } catch (error) {
-    console.error("DB connection failed:", error);
+    console.error("DB connection failed. Starting API without database access:", error.message);
   }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }
 
 startServer();
