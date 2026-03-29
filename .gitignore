@@ -80,7 +80,6 @@ web_modules/
 out
 /frontend/public
 /frontend/src/assets
-/frontend/tsconfig.node.json
 /frontend/vite.config.ts
 
 # Nuxt.js build / generate output

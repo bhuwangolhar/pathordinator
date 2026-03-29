@@ -13,7 +13,7 @@ function App() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/users");
+      const res = await fetch("http://localhost:8080/users");
       const data = await res.json();
       const usersWithStatus = (data.data || []).map((u: User, index: number) => ({
         ...u,
