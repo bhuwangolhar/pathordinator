@@ -1,0 +1,274 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.user-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.info-field p {
+  margin: 0;
+  color: #333;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.role-badge,
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.role-badge {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  text-transform: capitalize;
+}
+
+.status-badge {
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.inactive {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.password-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.password-prompt {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.password-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.verified-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+}
+
+.verified-message {
+  margin: 0;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.message {
+  margin: 10px 0 0 0;
+  font-size: 13px;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.message-error {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.message-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.modal-footer button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.btn-verify {
+  background-color: #1976d2;
+  color: white;
+}
+
+.btn-verify:hover:not(:disabled) {
+  background-color: #1565c0;
+}
+
+.btn-verify:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-deactivate {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-deactivate:hover:not(:disabled) {
+  background-color: #d32f2f;
+}
+
+.btn-deactivate:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-activate {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-activate:hover:not(:disabled) {
+  background-color: #388e3c;
+}
+
+.btn-activate:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .modal-content {
+    width: 95%;
+    max-width: none;
+  }
+
+  .user-info {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
+}

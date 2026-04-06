@@ -7,4 +7,8 @@ router.get("/", userController.getUsers);
 
 router.post("/", userController.createUser);
 
+router.put("/:id/deactivate", userController.deactivateUser);
+
+router.put("/:id/activate", userController.activateUser);
+
 module.exports = router;
