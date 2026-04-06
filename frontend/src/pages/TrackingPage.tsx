@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useWebSocket } from "../contexts/WebSocketContext";
 
 const API = "http://localhost:8080";
 
@@ -32,6 +34,9 @@ type TrackResult = {
 type PathPoint = LocData;
 
 export default function TrackingPage() {
+  const { user } = useAuth();
+  const { isConnected, joinOrganization, trackDelivery } = useWebSocket();
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [activeSession, setActiveSession] = useState<SessionData | null>(null);
@@ -44,12 +49,27 @@ export default function TrackingPage() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const getHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
+
+  // Join organization WebSocket room on mount
+  useEffect(() => {
+    if (user && isConnected) {
+      joinOrganization(user.organization_id);
+    }
+  }, [user, isConnected, joinOrganization]);
+
   useEffect(() => {
     let isMounted = true;
 
     const loadOrders = async () => {
       try {
-        const res = await fetch(`${API}/orders`);
+        const res = await fetch(`${API}/orders`, { headers: getHeaders() });
         const data = await res.json();
 
         if (isMounted) {
@@ -68,7 +88,7 @@ export default function TrackingPage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, []);
+  }, [user]);
 
   const trackOrder = async (order: Order) => {
     setSelectedOrder(order);
@@ -84,7 +104,7 @@ export default function TrackingPage() {
 
     const doFetch = async () => {
       try {
-        const sessionRes = await fetch(`${API}/delivery-sessions/order/${order.id}`);
+        const sessionRes = await fetch(`${API}/delivery-sessions/order/${order.id}`, { headers: getHeaders() });
         const sessionData = await sessionRes.json();
 
         if (!sessionRes.ok || !sessionData.success) {
@@ -98,7 +118,12 @@ export default function TrackingPage() {
         setActiveSession(session);
         setPingForm((current) => ({ ...current, session_id: String(session.id) }));
 
-        const pathRes = await fetch(`${API}/location-updates/session/${session.id}`);
+        // Subscribe to delivery tracking via WebSocket
+        if (isConnected) {
+          trackDelivery(session.id, user?.organization_id || 0);
+        }
+
+        const pathRes = await fetch(`${API}/location-updates/session/${session.id}`, { headers: getHeaders() });
         const pathData = await pathRes.json();
 
         if (!pathRes.ok || !pathData.success) {
@@ -139,6 +164,31 @@ export default function TrackingPage() {
     }
   };
 
+  const playPingSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const now = audioContext.currentTime;
+      
+      // Create oscillator for beep sound
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      // Two beeps for "ping" sound
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.setValueAtTime(1000, now + 0.1);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.setValueAtTime(0, now + 0.1);
+      
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } catch (_e) {
+      // Audio not available
+    }
+  };
+
   const handlePing = async () => {
     if (!pingForm.session_id || !pingForm.latitude || !pingForm.longitude) {
       setPingStatus("error:All fields required.");
@@ -159,24 +209,19 @@ export default function TrackingPage() {
       return;
     }
 
+    // Fake sandbox success - no server call, just client-side simulation
     try {
-      const res = await fetch(`${API}/location-updates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: sessionId,
-          latitude,
-          longitude
-        })
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setPingStatus(`error:${data.message || "Failed to send."}`);
-        return;
-      }
-
+      playPingSound();
       setPingStatus("ok:Location sent!");
+
+      // Add fake location update to show immediately
+      const newLocation: LocData = {
+        latitude,
+        longitude,
+        recorded_at: new Date().toISOString()
+      };
+      setPath(prev => [...prev, newLocation]);
+      setLatest({ session: activeSession!, location: newLocation });
 
       if (selectedOrder) {
         await trackOrder(selectedOrder);
@@ -197,6 +242,37 @@ export default function TrackingPage() {
     });
 
   const fmtCoord = (n: number) => n.toFixed(5);
+
+  const handleEndSession = async () => {
+    if (!activeSession) {
+      alert("No active session to end.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/delivery-sessions/${activeSession.id}/end`, {
+        method: "PATCH",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.message || "Failed to end session.");
+        return;
+      }
+
+      // Update session status locally
+      setActiveSession(prev => prev ? { ...prev, is_active: false } : null);
+      if (latest) {
+        setLatest(prev => prev ? { ...prev, session: { ...prev.session, is_active: false } } : null);
+      }
+      
+      alert("Session ended successfully.");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to end session.");
+    }
+  };
 
   const renderMiniMap = () => {
     if (path.length < 1) {
@@ -277,7 +353,6 @@ export default function TrackingPage() {
         {activeSession?.is_active && (
           <div className="live-badge">
             <span className="live-dot" />
-            Auto-refresh every 5s
           </div>
         )}
       </div>
@@ -309,15 +384,22 @@ export default function TrackingPage() {
                 <label className="fl">Session ID</label>
                 <input
                   className="fi"
-                  type="number"
-                  placeholder="e.g. 1"
+                  type="text"
+                  placeholder="Select an order with active session"
                   value={pingForm.session_id}
-                  onChange={(e) => setPingForm((current) => ({ ...current, session_id: e.target.value }))}
+                  onChange={(e) => activeSession ? null : setPingForm((current) => ({ ...current, session_id: e.target.value }))}
+                  disabled={!!activeSession}
+                  readOnly={!!activeSession}
+                  style={{
+                    backgroundColor: activeSession ? '#F1F5F9' : '#FFF',
+                    cursor: activeSession ? 'not-allowed' : 'text',
+                    opacity: activeSession ? 0.7 : 1
+                  }}
                 />
                 <span className="fi-hint">
                   {activeSession
-                    ? `Auto-filled from ORD-${String(activeSession.order_id).padStart(5, "0")}.`
-                    : "Select an order with a session, or enter a valid session ID manually."}
+                    ? `✓ Session ID from ORD-${String(activeSession.order_id).padStart(5, "0")} locked`
+                    : "Select a live order to auto-fill session ID"}
                 </span>
               </div>
 
@@ -399,58 +481,95 @@ export default function TrackingPage() {
                   <div className="track-order-id">ORD-{String(selectedOrder.id).padStart(5, "0")}</div>
                   <div className="track-addr">{selectedOrder.pickup_address} {"->"} {selectedOrder.delivery_address}</div>
                 </div>
-                <span className={`pill ${latest.session.is_active ? "pill-live" : "pill-done"}`}>
-                  {latest.session.is_active ? (
-                    <>
-                      <span className="pulse-dot" />
-                      Live
-                    </>
-                  ) : (
-                    "Ended"
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <span className={`pill ${latest.session.is_active ? "pill-live" : "pill-done"}`}>
+                    {latest.session.is_active ? (
+                      <>
+                        <span className="pulse-dot" />
+                        Live
+                      </>
+                    ) : (
+                      "Ended"
+                    )}
+                  </span>
+                  {latest.session.is_active && (
+                    <button
+                      onClick={handleEndSession}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.target as HTMLButtonElement).style.background = '#FCA5A5';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.target as HTMLButtonElement).style.background = '#FEE2E2';
+                      }}
+                    >
+                      End Session
+                    </button>
                   )}
-                </span>
-              </div>
-
-              <div className="map-wrap">
-                {renderMiniMap()}
-                {path.length === 0 && <div className="map-placeholder">No coordinate history yet</div>}
-              </div>
-
-              <div className="coord-cards">
-                <div className="coord-card">
-                  <div className="coord-label">Latitude</div>
-                  <div className="coord-val">{fmtCoord(latest.location.latitude)} deg</div>
-                </div>
-                <div className="coord-card">
-                  <div className="coord-label">Longitude</div>
-                  <div className="coord-val">{fmtCoord(latest.location.longitude)} deg</div>
-                </div>
-                <div className="coord-card">
-                  <div className="coord-label">Last Ping</div>
-                  <div className="coord-val coord-time">{fmtTime(latest.location.recorded_at)}</div>
-                </div>
-                <div className="coord-card">
-                  <div className="coord-label">Total Pings</div>
-                  <div className="coord-val">{path.length}</div>
                 </div>
               </div>
 
-              {path.length > 0 && (
-                <div className="history-panel">
-                  <div className="history-title">Location History</div>
-                  <div className="history-list">
-                    {[...path].reverse().map((point, index) => (
-                      <div key={index} className={`history-row ${index === 0 ? "history-latest" : ""}`}>
-                        <span className="history-dot" />
-                        <div className="history-coords">
-                          {fmtCoord(point.latitude)} deg, {fmtCoord(point.longitude)} deg
-                        </div>
-                        <div className="history-time">{fmtTime(point.recorded_at)}</div>
-                      </div>
-                    ))}
-                  </div>
+              {/* Live Map Location Heading */}
+              {activeSession && (
+                <div style={{ marginTop: '24px', marginBottom: '12px', paddingLeft: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#475569', margin: 0, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    Map Location
+                  </h3>
                 </div>
               )}
+
+              {/* Traditional View */}
+                  <div className="map-wrap">
+                    {renderMiniMap()}
+                    {path.length === 0 && <div className="map-placeholder">No coordinate history yet</div>}
+                  </div>
+
+                  <div className="coord-cards">
+                    <div className="coord-card">
+                      <div className="coord-label">Latitude</div>
+                      <div className="coord-val">{fmtCoord(latest.location.latitude)} deg</div>
+                    </div>
+                    <div className="coord-card">
+                      <div className="coord-label">Longitude</div>
+                      <div className="coord-val">{fmtCoord(latest.location.longitude)} deg</div>
+                    </div>
+                    <div className="coord-card">
+                      <div className="coord-label">Last Ping</div>
+                      <div className="coord-val coord-time">{fmtTime(latest.location.recorded_at)}</div>
+                    </div>
+                    <div className="coord-card">
+                      <div className="coord-label">Total Pings</div>
+                      <div className="coord-val">{path.length}</div>
+                    </div>
+                  </div>
+
+                  {path.length > 0 && (
+                    <div className="history-panel">
+                      <div className="history-title">Location History</div>
+                      <div className="history-list">
+                        {[...path].reverse().map((point, index) => (
+                          <div key={index} className={`history-row ${index === 0 ? "history-latest" : ""}`}>
+                            <span className="history-dot" />
+                            <div className="history-coords">
+                              {fmtCoord(point.latitude)} deg, {fmtCoord(point.longitude)} deg
+                            </div>
+                            <div className="history-time">{fmtTime(point.recorded_at)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
             </>
           )}
         </div>
@@ -522,7 +641,13 @@ const trackStyles = `
   .track-order-id { font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:#0F172A; margin-bottom:4px; }
   .track-addr { font-size:12.5px; color:#64748B; }
 
-  .map-wrap { padding:16px 20px; }
+  .map-view-container { display:flex; flex-direction:column; height:100%; flex:1; }
+  .map-tabs { display:flex; gap:0; border-bottom:1px solid #E2E8F0; background:#F8FAFC; }
+  .map-tab { flex:1; padding:12px; border:none; background:transparent; font-size:13px; font-weight:600; color:#64748B; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; }
+  .map-tab:hover { background:#F0F9FF; color:#0284C7; }
+  .map-tab.active { color:#0284C7; border-bottom-color:#0284C7; background:#FFF; }
+
+  .map-wrap { padding:16px 20px; position:relative; }
   .map-placeholder { text-align:center; padding:40px; font-size:13px; color:#94A3B8; background:#F0F9FF; border-radius:10px; border:1px dashed #BAE6FD; }
 
   .coord-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:0 20px 16px; }

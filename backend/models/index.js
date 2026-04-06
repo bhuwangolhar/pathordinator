@@ -8,20 +8,20 @@ const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
 const configPath = path.join(__dirname, '..', 'config', 'config.json');
 const fileConfig = fs.existsSync(configPath) ? require(configPath)[env] : null;
-const defaultConfig = {
-  username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'pathordinator',
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: Number(process.env.DB_PORT || 5432),
-  dialect: process.env.DB_DIALECT || 'postgres',
-  logging: false
+
+// Build config from environment variables (preferred) with file config as fallback
+const config = {
+  username: process.env.DB_USER || process.env.DB_USERNAME || fileConfig?.username || 'postgres',
+  password: process.env.DB_PASSWORD || fileConfig?.password || '',
+  database: process.env.DB_NAME || fileConfig?.database || 'pathordinator',
+  host: process.env.DB_HOST || fileConfig?.host || '127.0.0.1',
+  port: Number(process.env.DB_PORT || fileConfig?.port || 5432),
+  dialect: process.env.DB_DIALECT || fileConfig?.dialect || 'postgres',
+  logging: false,
+  ...(fileConfig?.dialectOptions && { dialectOptions: fileConfig.dialectOptions }),
+  ...(fileConfig?.use_env_variable && { use_env_variable: fileConfig.use_env_variable })
 };
-const config = fileConfig || (
-  process.env.DATABASE_URL
-    ? { ...defaultConfig, use_env_variable: 'DATABASE_URL' }
-    : defaultConfig
-);
+
 const db = {};
 const modelDirectories = [
   __dirname,
@@ -29,7 +29,7 @@ const modelDirectories = [
 ].filter(directory => fs.existsSync(directory));
 
 let sequelize;
-if (config.use_env_variable) {
+if (config.use_env_variable && process.env[config.use_env_variable]) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, config);

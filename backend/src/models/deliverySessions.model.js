@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
   class DeliverySession extends Model {
     static associate(models) {
       DeliverySession.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
+      DeliverySession.belongsTo(models.Organization, { foreignKey: 'organization_id', as: 'organization' });
       DeliverySession.belongsTo(models.User, { foreignKey: 'delivery_partner_id', as: 'deliveryPartner' });
       DeliverySession.hasMany(models.LocationUpdate, { foreignKey: 'session_id', as: 'locationUpdates' });
     }
@@ -14,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
   DeliverySession.init(
     {
       order_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      organization_id: {
         type: DataTypes.INTEGER,
         allowNull: false
       },

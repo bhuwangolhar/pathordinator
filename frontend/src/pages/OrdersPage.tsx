@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 
 const API = "http://localhost:8080";
 
@@ -9,7 +10,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   delivered: { label: "Delivered", cls: "s-delivered" },
 };
 
-type Customer = { id: number; name: string; email: string };
+type Customer = { id: number; name: string; email: string; role: string };
 
 type Order = {
   id: number;
@@ -24,25 +25,62 @@ type Order = {
 type FormState = {
   customer_id: string;
   pickup_address: string;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
   delivery_address: string;
+  delivery_latitude: number | null;
+  delivery_longitude: number | null;
 };
 
 export default function OrdersPage() {
+  const { user: currentUser } = useAuth();
   const [orders, setOrders]   = useState<Order[]>([]);
   const [users, setUsers]     = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({
     customer_id: "",
     pickup_address: "",
+    pickup_latitude: null,
+    pickup_longitude: null,
     delivery_address: "",
+    delivery_latitude: null,
+    delivery_longitude: null,
   });
   const [formError, setFormError] = useState("");
 
+  useEffect(() => {
+    setAuthToken(localStorage.getItem("authToken"));
+    fetchOrders();
+    fetchUsers();
+  }, [currentUser]);
+
+  // Initialize auth token from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setAuthToken(token);
+    }
+  }, [currentUser]);
+
+  const getHeaders = () => {
+    const token = authToken || localStorage.getItem('authToken');
+    const headers: any = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   const fetchOrders = async () => {
     try {
-      const res = await fetch(`${API}/orders`);
+      const res = await fetch(`${API}/orders`, {
+        headers: getHeaders()
+      });
       const data = await res.json();
       setOrders(data.data || []);
     } catch (e) {
@@ -53,41 +91,75 @@ export default function OrdersPage() {
   };
 
   const fetchUsers = async () => {
+    if (!currentUser || !currentUser.organization_id) {
+      setUsers([]);
+      return;
+    }
+
     try {
-      const res = await fetch(`${API}/users`);
+      const res = await fetch(
+        `${API}/organizations/${currentUser.organization_id}/users`,
+        { headers: getHeaders() }
+      );
       const data = await res.json();
-      setUsers(data.data || []);
+      // Filter to only show customers
+      const customers = (data.data || []).filter((u: Customer) => u.role === 'customer');
+      setUsers(customers);
     } catch (e) {
       console.error(e);
+      setUsers([]);
     }
   };
 
   useEffect(() => {
     fetchOrders();
     fetchUsers();
-  }, []);
+  }, [currentUser]);
 
   const handleCreate = async () => {
     if (!form.customer_id || !form.pickup_address || !form.delivery_address) {
       setFormError("All fields are required.");
       return;
     }
+
+    if (form.pickup_latitude === null || form.pickup_longitude === null) {
+      setFormError("Please select a valid pickup location from the map.");
+      return;
+    }
+
+    if (form.delivery_latitude === null || form.delivery_longitude === null) {
+      setFormError("Please select a valid delivery location from the map.");
+      return;
+    }
+
     setFormError("");
     setSubmitting(true);
     try {
       const res = await fetch(`${API}/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({
           customer_id: Number(form.customer_id),
           pickup_address: form.pickup_address,
+          pickup_latitude: form.pickup_latitude,
+          pickup_longitude: form.pickup_longitude,
           delivery_address: form.delivery_address,
+          delivery_latitude: form.delivery_latitude,
+          delivery_longitude: form.delivery_longitude,
         }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
       setShowModal(false);
-      setForm({ customer_id: "", pickup_address: "", delivery_address: "" });
+      setForm({ 
+        customer_id: "", 
+        pickup_address: "", 
+        pickup_latitude: null,
+        pickup_longitude: null,
+        delivery_address: "",
+        delivery_latitude: null,
+        delivery_longitude: null
+      });
       await fetchOrders();
     } catch (e: any) {
       setFormError(e.message || "Failed to create order.");
@@ -100,7 +172,7 @@ export default function OrdersPage() {
     try {
       await fetch(`${API}/orders/${orderId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ status }),
       });
       setOrders(prev =>
@@ -110,6 +182,8 @@ export default function OrdersPage() {
       console.error(e);
     }
   };
+
+
 
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", {
@@ -217,10 +291,35 @@ export default function OrdersPage() {
                 <input
                   className="field-input"
                   type="text"
-                  placeholder="123 Main St, City"
+                  placeholder="Enter pickup address..."
                   value={form.pickup_address}
                   onChange={e => setForm(f => ({ ...f, pickup_address: e.target.value }))}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="field">
+                  <label className="field-label">Pickup Latitude</label>
+                  <input
+                    className="field-input"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 28.6139"
+                    value={form.pickup_latitude !== null ? form.pickup_latitude : ''}
+                    onChange={e => setForm(f => ({ ...f, pickup_latitude: e.target.value ? parseFloat(e.target.value) : null }))}
+                  />
+                </div>
+                <div className="field">
+                  <label className="field-label">Pickup Longitude</label>
+                  <input
+                    className="field-input"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 77.2090"
+                    value={form.pickup_longitude !== null ? form.pickup_longitude : ''}
+                    onChange={e => setForm(f => ({ ...f, pickup_longitude: e.target.value ? parseFloat(e.target.value) : null }))}
+                  />
+                </div>
               </div>
 
               <div className="field">
@@ -228,10 +327,35 @@ export default function OrdersPage() {
                 <input
                   className="field-input"
                   type="text"
-                  placeholder="456 Park Ave, City"
+                  placeholder="Enter delivery address..."
                   value={form.delivery_address}
                   onChange={e => setForm(f => ({ ...f, delivery_address: e.target.value }))}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="field">
+                  <label className="field-label">Delivery Latitude</label>
+                  <input
+                    className="field-input"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 28.5355"
+                    value={form.delivery_latitude !== null ? form.delivery_latitude : ''}
+                    onChange={e => setForm(f => ({ ...f, delivery_latitude: e.target.value ? parseFloat(e.target.value) : null }))}
+                  />
+                </div>
+                <div className="field">
+                  <label className="field-label">Delivery Longitude</label>
+                  <input
+                    className="field-input"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 77.3910"
+                    value={form.delivery_longitude !== null ? form.delivery_longitude : ''}
+                    onChange={e => setForm(f => ({ ...f, delivery_longitude: e.target.value ? parseFloat(e.target.value) : null }))}
+                  />
+                </div>
               </div>
 
               {formError && <p className="field-error">{formError}</p>}
@@ -246,6 +370,8 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+
     </>
   );
 }
@@ -307,4 +433,5 @@ const pageStyles = `
   .field-input { padding: 9px 12px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 13.5px; font-family: inherit; color: #0F172A; background: #F8FAFC; outline: none; transition: border-color .12s, background .12s; }
   .field-input:focus { border-color: #93C5FD; background: #fff; }
   .field-error { font-size: 12.5px; color: #DC2626; padding: 8px 12px; background: #FFF7F7; border: 1px solid #FECACA; border-radius: 6px; }
+  .coords-display { font-size: 11px; color: #64748B; padding: 6px 8px; background: #F1F5F9; border-radius: 6px; font-family: 'DM Mono', monospace; margin-top: 4px; }
 `;

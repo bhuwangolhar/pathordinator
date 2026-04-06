@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             User.hasMany(models.Order, { foreignKey: 'customer_id', as: 'orders' });
             User.hasMany(models.DeliverySession, { foreignKey: 'delivery_partner_id', as: 'deliverySessions' });
+            User.belongsTo(models.Organization, { foreignKey: 'organization_id', as: 'organization' });
         }
     }
 
@@ -24,6 +25,19 @@ module.exports = (sequelize, DataTypes) => {
             role: {
                 type: DataTypes.ENUM('customer', 'delivery_partner', 'admin'),
                 allowNull: false
+            },
+            is_active: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: true,
+                allowNull: false
+            },
+            organization_id: {
+                type: DataTypes.INTEGER,
+                allowNull: true
+            },
+            password_hash: {
+                type: DataTypes.STRING,
+                allowNull: true
             }
         },
         {

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useRefresh } from "../contexts/RefreshContext";
 
 const API = "http://localhost:8080";
 
@@ -17,6 +19,7 @@ type Order  = { id: number; status: string; pickup_address: string };
 type User   = { id: number; name: string; email: string; role: string };
 
 export default function DeliverySessionsPage() {
+  const { user: currentUser } = useAuth();
   const [sessions, setSessions]     = useState<Session[]>([]);
   const [orders, setOrders]         = useState<Order[]>([]);
   const [partners, setPartners]     = useState<User[]>([]);
@@ -26,19 +29,38 @@ export default function DeliverySessionsPage() {
   const [ending, setEnding]         = useState<number | null>(null);
   const [form, setForm]             = useState({ order_id: "", delivery_partner_id: "" });
   const [formError, setFormError]   = useState("");
+  const { triggerUsersRefresh } = useRefresh();
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    const headers: any = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+  };
 
   const fetchSessions = async () => {
-    // fetch sessions for all orders by fetching each order's session
-    // Since there's no GET /delivery-sessions, we load per-order
-    // We instead call /delivery-sessions/order/:id for each order
+    if (!currentUser || !currentUser.organization_id) {
+      setSessions([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const ordRes  = await fetch(`${API}/orders`);
+      const ordRes  = await fetch(`${API}/orders`, {
+        headers: getHeaders()
+      });
       const ordData = await ordRes.json();
       const allOrders: Order[] = ordData.data || [];
 
       const settled = await Promise.allSettled(
         allOrders.map(o =>
-          fetch(`${API}/delivery-sessions/order/${o.id}`).then(r => r.json())
+          fetch(`${API}/delivery-sessions/order/${o.id}`, {
+            headers: getHeaders()
+          }).then(r => r.json())
         )
       );
 
@@ -55,15 +77,34 @@ export default function DeliverySessionsPage() {
   };
 
   const fetchDropdowns = async () => {
-    const [ordRes, usrRes] = await Promise.all([
-      fetch(`${API}/orders`).then(r => r.json()),
-      fetch(`${API}/users`).then(r => r.json()),
-    ]);
-    setOrders(ordRes.data || []);
-    setPartners((usrRes.data || []).filter((u: User) => u.role === "delivery_partner"));
+    if (!currentUser || !currentUser.organization_id) {
+      setOrders([]);
+      setPartners([]);
+      return;
+    }
+
+    try {
+      const [ordRes, usrRes] = await Promise.all([
+        fetch(`${API}/orders`, {
+          headers: getHeaders()
+        }).then(r => r.json()),
+        fetch(`${API}/organizations/${currentUser.organization_id}/users`, {
+          headers: getHeaders()
+        }).then(r => r.json()),
+      ]);
+      setOrders(ordRes.data || []);
+      const allUsers = usrRes.data || [];
+      const deliveryPartners = allUsers.filter((u: User) => u.role === "delivery_partner");
+      setPartners(deliveryPartners);
+    } catch (e) {
+      if (import.meta.env.DEV) console.error("Error fetching dropdowns:", e);
+    }
   };
 
-  useEffect(() => { fetchSessions(); fetchDropdowns(); }, []);
+  useEffect(() => { 
+    fetchSessions(); 
+    fetchDropdowns(); 
+  }, [currentUser]);
 
   const handleStart = async () => {
     if (!form.order_id || !form.delivery_partner_id) {
@@ -73,17 +114,24 @@ export default function DeliverySessionsPage() {
     try {
       const res  = await fetch(`${API}/delivery-sessions/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({
           order_id: Number(form.order_id),
           delivery_partner_id: Number(form.delivery_partner_id)
         })
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `Failed to start session (Status: ${res.status})`);
+      }
+      
+      // Add the newly created session to the list immediately
+      const newSession: Session = data.data;
+      setSessions(prev => [...prev, newSession]);
+      
       setShowModal(false);
       setForm({ order_id: "", delivery_partner_id: "" });
-      await fetchSessions();
     } catch (e: any) {
       setFormError(e.message || "Failed to start session.");
     } finally { setSubmitting(false); }
@@ -92,9 +140,23 @@ export default function DeliverySessionsPage() {
   const handleEnd = async (id: number) => {
     setEnding(id);
     try {
-      await fetch(`${API}/delivery-sessions/${id}/end`, { method: "PATCH" });
+      const res = await fetch(`${API}/delivery-sessions/${id}/end`, { 
+        method: "PATCH",
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to end session");
+      }
+      
       setSessions(prev => prev.map(s => s.id === id ? { ...s, is_active: false, ended_at: new Date().toISOString() } : s));
-    } catch (e) { console.error(e); }
+      // Trigger users page refresh to update online status
+      triggerUsersRefresh('Session ended');
+    } catch (e) { 
+      console.error(e);
+      alert("Failed to end session. Please try again.");
+    }
     finally { setEnding(null); }
   };
 

@@ -7,19 +7,68 @@ const ALLOWED_STATUSES = ['created', 'assigned', 'picked_up', 'delivered'];
 
 exports.createOrder = async (req, res) => {
   try {
-    const { customer_id, pickup_address, delivery_address } = req.body;
+    const { customer_id, pickup_address, delivery_address, pickup_latitude, pickup_longitude, delivery_latitude, delivery_longitude } = req.body;
+    const userOrganizationId = req.user?.organization_id;
 
-    if (!customer_id || !pickup_address || !delivery_address) {
+    if (!userOrganizationId) {
+      return res.status(401).json({
+        success: false,
+        message: "User must belong to an organization"
+      });
+    }
+
+    if (!customer_id || !pickup_address || !delivery_address || pickup_latitude === undefined || pickup_longitude === undefined || delivery_latitude === undefined || delivery_longitude === undefined) {
       return res.status(400).json({
         success: false,
-        message: "customer_id, pickup_address, and delivery_address are required"
+        message: "customer_id, addresses, and coordinates (latitude/longitude) for both pickup and delivery are required"
+      });
+    }
+
+    // Validate coordinates
+    const pickupLat = Number(pickup_latitude);
+    const pickupLng = Number(pickup_longitude);
+    const deliveryLat = Number(delivery_latitude);
+    const deliveryLng = Number(delivery_longitude);
+
+    if (!Number.isFinite(pickupLat) || !Number.isFinite(pickupLng) || !Number.isFinite(deliveryLat) || !Number.isFinite(deliveryLng)) {
+      return res.status(400).json({
+        success: false,
+        message: "Coordinates must be valid numbers"
+      });
+    }
+
+    if (pickupLat < -90 || pickupLat > 90 || deliveryLat < -90 || deliveryLat > 90) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude must be between -90 and 90"
+      });
+    }
+
+    if (pickupLng < -180 || pickupLng > 180 || deliveryLng < -180 || deliveryLng > 180) {
+      return res.status(400).json({
+        success: false,
+        message: "Longitude must be between -180 and 180"
+      });
+    }
+
+    // Verify customer belongs to the same organization
+    const customer = await User.findByPk(customer_id);
+    if (!customer || customer.organization_id !== userOrganizationId) {
+      return res.status(403).json({
+        success: false,
+        message: "Customer must belong to your organization"
       });
     }
 
     const order = await Order.create({
       customer_id,
+      organization_id: userOrganizationId,
       pickup_address,
+      pickup_latitude: pickupLat,
+      pickup_longitude: pickupLng,
       delivery_address,
+      delivery_latitude: deliveryLat,
+      delivery_longitude: deliveryLng,
       status: 'created'
     });
 
@@ -39,7 +88,17 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrders = async (req, res) => {
   try {
+    const userOrganizationId = req.user?.organization_id;
+
+    if (!userOrganizationId) {
+      return res.status(401).json({
+        success: false,
+        message: "User must belong to an organization"
+      });
+    }
+
     const orders = await Order.findAll({
+      where: { organization_id: userOrganizationId },
       include: [
         {
           model: User,
@@ -66,6 +125,15 @@ exports.getOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
   try {
+    const userOrganizationId = req.user?.organization_id;
+
+    if (!userOrganizationId) {
+      return res.status(401).json({
+        success: false,
+        message: "User must belong to an organization"
+      });
+    }
+
     const order = await Order.findByPk(req.params.id, {
       include: [
         {
@@ -80,6 +148,14 @@ exports.getOrderById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Order not found"
+      });
+    }
+
+    // Verify order belongs to user's organization
+    if (order.organization_id !== userOrganizationId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this order"
       });
     }
 
@@ -100,6 +176,14 @@ exports.getOrderById = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const userOrganizationId = req.user?.organization_id;
+
+    if (!userOrganizationId) {
+      return res.status(401).json({
+        success: false,
+        message: "User must belong to an organization"
+      });
+    }
 
     if (!status) {
       return res.status(400).json({
@@ -121,6 +205,14 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Order not found"
+      });
+    }
+
+    // Verify order belongs to user's organization
+    if (order.organization_id !== userOrganizationId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this order"
       });
     }
 

@@ -1,0 +1,84 @@
+.delivery-map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.delivery-map-container .gm-style {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.api-key-warning {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 10;
+  text-align: center;
+  max-width: 80%;
+}
+
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #666;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.info-window-content {
+  padding: 8px 12px;
+  min-width: 150px;
+}
+
+.info-window-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.info-window-coordinates {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+.info-window-timestamp {
+  font-size: 12px;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .info-window-content {
+    min-width: 140px;
+  }
+  
+  .info-window-name {
+    font-size: 13px;
+  }
+  
+  .info-window-coordinates,
+  .info-window-timestamp {
+    font-size: 11px;
+  }
+}
