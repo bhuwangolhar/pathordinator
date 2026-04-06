@@ -86,17 +86,18 @@ io.on("connection", (socket) => {
 
 async function startServer() {
   try {
+    console.log("🔍 ENV:", process.env.NODE_ENV);
+    console.log("🔍 DB URL present:", !!process.env.DATABASE_URL);
+
     await db.sequelize.authenticate();
-    if (process.env.NODE_ENV !== 'production') console.log("Database connected.");
+    console.log("✅ Database connected successfully");
   } catch (error) {
-    console.error("DB connection failed:", error.message);
+    console.error("❌ DB connection failed:", error);
   }
 
   httpServer.listen(PORT, () => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`WebSocket server initialized`);
-    }
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔌 WebSocket server initialized`);
   });
 }
 
