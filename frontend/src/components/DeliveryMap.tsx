@@ -33,9 +33,10 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
   useEffect(() => {
     const fetchLocations = async () => {
       try {
+        const apiBase = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
         const url = deliverySessionId
-          ? `http://localhost:8080/location-updates?delivery_session_id=${deliverySessionId}`
-          : `http://localhost:8080/location-updates?organization_id=${organizationId}`;
+          ? `${apiBase}/location-updates?delivery_session_id=${deliverySessionId}`
+          : `${apiBase}/location-updates?organization_id=${organizationId}`;
 
         const res = await fetch(url);
         const data = await res.json();

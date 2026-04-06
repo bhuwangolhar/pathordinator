@@ -79,7 +79,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
     try {
       const response = await fetch(
-        `http://localhost:8080/organizations/${organizationId}/users/${user.id}/${action}`,
+        `${import.meta.env.VITE_APP_API_URL}/organizations/${organizationId}/users/${user.id}/${action}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

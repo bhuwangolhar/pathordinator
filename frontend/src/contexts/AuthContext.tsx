@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const API = 'http://localhost:8080';
+  const API = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
 
   // Check localStorage on mount
   useEffect(() => {

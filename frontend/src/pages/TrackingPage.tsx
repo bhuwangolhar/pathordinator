@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useWebSocket } from "../contexts/WebSocketContext";
 
-const API = "http://localhost:8080";
+const API = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
 
 type Order = {
   id: number;
