@@ -42,12 +42,12 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/auth", authRoutes);
-app.use("/organizations", organizationRoutes);
-app.use("/users", userRoutes);
-app.use("/orders", orderRoutes);
-app.use("/delivery-sessions", deliverySessionRoutes);
-app.use("/location-updates",  locationUpdateRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/organizations", organizationRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/delivery-sessions", deliverySessionRoutes);
+app.use("/api/location-updates",  locationUpdateRoutes);
 
 const PORT = Number(process.env.PORT) || 8080;
 
