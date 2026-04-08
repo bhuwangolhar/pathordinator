@@ -1,43 +1,41 @@
 /**
- * API Configuration
- * Ensures all API calls use the correct base URL from environment variables
- * Never falls back to localhost in production
+ * API Configuration - CRITICAL
+ * Ensures ALL API calls use VITE_API_URL from environment
+ * NO fallback to localhost under ANY condition in production
  */
 
-// Get API base URL from environment variable
-const apiBaseUrl = import.meta.env.VITE_APP_API_URL;
+// REQUIRED: API base URL must come from environment variable
+const apiBaseUrl = import.meta.env.VITE_API_URL;
 
-// Validate that API URL is properly configured
-if (!apiBaseUrl) {
-  console.error(
-    'CRITICAL: VITE_APP_API_URL environment variable is not set!',
-    'Expected format: https://your-domain.com/api',
-    'Current value:', import.meta.env.VITE_APP_API_URL
-  );
+/**
+ * VALIDATE: Environment variable is properly set
+ * This will fail loudly if VITE_API_URL is not configured
+ */
+if (!apiBaseUrl || apiBaseUrl === 'undefined') {
+  const errorMsg = `
+  🚨 CRITICAL ERROR 🚨
+  VITE_API_URL environment variable is NOT SET!
   
-  // In production, this will prevent fallback to localhost
+  Required format: https://your-domain.com/api
+  Current value: ${import.meta.env.VITE_API_URL}
+  Environment: ${import.meta.env.MODE}
+  `;
+  console.error(errorMsg);
+  
   if (import.meta.env.PROD) {
-    console.error('Production build detected. API URL must be configured.');
+    // HARD STOP: Production builds MUST have proper config
+    throw new Error('VITE_API_URL is required for production builds');
   }
 }
 
-export const API_BASE_URL = apiBaseUrl || (() => {
-  // Development fallback only
-  const devUrl = 'http://localhost:8080';
-  if (import.meta.env.DEV) {
-    console.warn(`[DEV MODE] Using fallback API URL: ${devUrl}`);
-  }
-  return devUrl;
-})();
+/**
+ * API_BASE_URL - This is THE ONLY endpoint configuration
+ * All fetch/axios calls MUST use this
+ * NO other hardcoded URLs are allowed
+ */
+export const API_BASE_URL = apiBaseUrl;
 
-// Log API configuration on app start (for debugging)
-if (typeof window !== 'undefined') {
-  console.log('API Configuration:', {
-    apiUrl: API_BASE_URL,
-    environment: import.meta.env.MODE,
-    isDev: import.meta.env.DEV,
-    isProd: import.meta.env.PROD
-  });
-}
+// DEBUG: Log configuration on startup
+console.log('🔗 API BASE URL:', API_BASE_URL);
 
 export default API_BASE_URL;

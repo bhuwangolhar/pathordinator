@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./UserDetailModal.css";
 import { useAuth } from "../contexts/AuthContext";
 import { useRefresh } from "../contexts/RefreshContext";
+import { API_BASE_URL } from "../api/config";
 
 interface User {
   id: number;
@@ -46,7 +47,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
     setMessage("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_APP_API_URL}/auth/verify-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -79,7 +80,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_APP_API_URL}/organizations/${organizationId}/users/${user.id}/${action}`,
+        `${API_BASE_URL}/organizations/${organizationId}/users/${user.id}/${action}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
