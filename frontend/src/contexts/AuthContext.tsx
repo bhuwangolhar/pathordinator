@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { API_BASE_URL } from '../api/config';
 
 type AuthUser = {
   id: number;
@@ -25,7 +26,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const API = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
+  const API = API_BASE_URL;
+  
+  // Log authentication API base URL for debugging
+  if (import.meta.env.DEV) {
+    console.log('[Auth] API Base URL:', API);
+  }
 
   // Check localStorage on mount
   useEffect(() => {

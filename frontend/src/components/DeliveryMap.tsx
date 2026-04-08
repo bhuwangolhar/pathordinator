@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GoogleMap, LoadScript, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useWebSocket } from '../contexts/WebSocketContext';
+import { API_BASE_URL } from '../api/config';
 import './DeliveryMap.css';
 
 interface DeliveryLocation {
@@ -33,11 +34,13 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const apiBase = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
+        const apiBase = API_BASE_URL;
         const url = deliverySessionId
           ? `${apiBase}/location-updates?delivery_session_id=${deliverySessionId}`
           : `${apiBase}/location-updates?organization_id=${organizationId}`;
 
+        console.log('[DeliveryMap] Fetching locations from:', url);
+        
         const res = await fetch(url);
         const data = await res.json();
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import io, { Socket } from 'socket.io-client';
+import { API_BASE_URL } from '../api/config';
 
 interface LocationUpdate {
   id: number;
@@ -47,7 +48,9 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Initialize socket connection
-    const apiUrl = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
+    const apiUrl = API_BASE_URL;
+    console.log('[WebSocket] Connecting to:', apiUrl);
+    
     const newSocket = io(apiUrl, {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -56,10 +59,12 @@ export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
     });
 
     newSocket.on('connect', () => {
+      console.log('[WebSocket] Connected to:', apiUrl);
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
+      console.log('[WebSocket] Disconnected from:', apiUrl);
       setIsConnected(false);
     });
 

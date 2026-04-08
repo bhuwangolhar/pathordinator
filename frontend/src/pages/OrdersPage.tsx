@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { API_BASE_URL } from "../api/config";
 
-const API = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
+const API = API_BASE_URL;
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   created:   { label: "Created",   cls: "s-created"   },

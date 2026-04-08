@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRefresh } from "../contexts/RefreshContext";
+import { API_BASE_URL } from "../api/config";
 
-const API = import.meta.env.VITE_APP_API_URL || 'http://localhost:8080';
+const API = API_BASE_URL;
 
 type Session = {
   id: number;
