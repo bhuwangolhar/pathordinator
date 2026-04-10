@@ -2,18 +2,6 @@
 
 **A real-time location tracking and co-ordination platform for customers and delivery partners.**
 
-<p align="center">
-  <strong>A coordinated monitoring and management system for handling customers, delivery partners, sessions, and order workflows inside a unified platform.</strong>
-</p>
-
-<p align="center">
-  <img alt="Frontend" src="https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript-61DAFB?logo=react&logoColor=white" />
-  <img alt="Backend" src="https://img.shields.io/badge/Backend-Express%205%20%2B%20Sequelize-000000?logo=express&logoColor=white" />
-  <img alt="Database" src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white" />
-  <img alt="Realtime" src="https://img.shields.io/badge/Realtime-Socket.IO%204-010101?logo=socketdotio&logoColor=white" />
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg" />
-</p>
-
 ---
 
 ## Overview
